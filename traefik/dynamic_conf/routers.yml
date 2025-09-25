@@ -1,0 +1,36 @@
+http:
+  routers:
+    # Название роутера, как и в метках
+    moodle-router:
+      rule: "Host(`moodle.${DOMAIN}`)" # Правило маршрутизации (можно использовать Host, Path и др.)
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "cert-resolver"
+      # Ключевой момент: указываем, какому сервису предназначен этот роутер
+      service: "moodle-service@docker"
+
+    traefik-dashboard-router:
+      rule: "Host(`traefik.${DOMAIN}`)" # Правило маршрутизации (можно использовать Host, Path и др.)
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "cert-resolver"
+      # Ключевой момент: указываем, какому сервису предназначен этот роутер
+      service: "traefik-dashboard-service@docker"
+      middlewares:
+        - "dashboard-auth-middleware" # Пример, если нужно добавить middleware
+
+  # В этом же файле можно определять и middleware
+  middlewares:
+    dashboard-auth-middleware:
+      basicAuth:
+        users:
+          - "${TRAEFIK_DASHBOARD_CREDENTIALS}"
+
+  # Можно даже определять сервисы, но чаще мы хотим, чтобы Traefik находил их сам
+  # services:
+  #   whoami-service:
+  #     loadBalancer:
+  #       servers:
+  #         - url: "http://172.20.0.5:80" # Так делать НЕ нужно при работе с Docker

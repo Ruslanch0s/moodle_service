@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:11.8
+    container_name: moodle-db
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - backend
+
+  moodle:
+    image: bitnami/moodle:5.0.2
+    container_name: moodle-app
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+        restart: true
+    environment:
+      - MOODLE_DATABASE_HOST=mariadb
+      - MOODLE_DATABASE_USER=${MARIADB_USER}
+      - MOODLE_DATABASE_PASSWORD=${MARIADB_PASSWORD}
+      - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
+      - MOODLE_REVERSE_PROXY=yes
+      - MOODLE_SITE_URL=${MOODLE_SITE_URL}
+    volumes:
+      - ./moodle_data:/bitnami/moodle
+      - ./moodledata_data:/bitnami/moodledata
+    networks:
+      - backend
+      - frontend
+    expose:
+      - "8080"
+    labels:
+      # Включаем Traefik для этого контейнера
+      - "traefik.enable=true"
+      # Указываем, на какой порт внутри контейнера направлять трафик
+      - "traefik.http.services.moodle-service.loadbalancer.server.port=8080"
+
+  traefik:
+    image: traefik:v3.5.2
+    container_name: moodle-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes: # (ro - read-only)
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro # Подключаем файл со статической конфигурацией
+      - ./traefik/dynamic_conf:/etc/traefik/dynamic_conf:ro # Подключаем папку с динамической конфигурацией
+      - ./traefik/acme.json:/acme.json # Файл для хранения сертификатов (важно: файл должен существовать и быть пустым при первом запуске)
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Позволяет Traefik "слушать" события Docker
+    networks:
+      - frontend
+    labels:
+      # Включаем Traefik для этого контейнера
+      - "traefik.enable=true"
+      # Указываем, на какой порт внутри контейнера направлять трафик
+      - "traefik.http.services.traefik-dashboard-service.loadbalancer.server.port=8080"
+
+# Определяем сети для изоляции сервисов
+networks:
+  frontend:
+  backend:

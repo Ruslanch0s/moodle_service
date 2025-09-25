@@ -1,0 +1,39 @@
+# Статическая конфигурация Traefik
+
+# Включаем API и Dashboard (для отладки)
+api:
+  dashboard: true
+  insecure: true # В продакшене лучше защитить
+
+# Определяем "точки входа" (порты, которые слушает Traefik)
+entryPoints:
+  web:
+    address: ":80"
+    # Добавляем middleware для автоматического редиректа с HTTP на HTTPS
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":443"
+
+# Настраиваем резолвер для Let's Encrypt
+certificatesResolvers:
+  cert-resolver:
+    acme:
+      email: "${ACME_EMAIL}" # ВАЖНО: Укажите ваш реальный email
+      storage: "acme.json" # Файл для хранения сертификатов
+      httpChallenge:
+        entryPoint: web # Используем HTTP-челлендж через точку входа web (порт 80)
+        
+providers:
+  # Провайдер Docker для автоматического обнаружения контейнеров
+  docker:
+    exposedByDefault: false # Рекомендуется false: Traefik будет управлять только контейнерами с явной меткой traefik.enable=true
+  # Включаем провайдер файлов
+  file:
+    # Указываем папку ВНУТРИ контейнера, за которой нужно следить
+    directory: /etc/traefik/dynamic_conf
+    watch: true # Эта опция говорит Traefik автоматически применять изменения из файлов
