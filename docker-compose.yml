@@ -39,6 +39,8 @@ services:
       - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
       - MOODLE_REVERSE_PROXY=yes
       - MOODLE_SITE_URL=${MOODLE_SITE_URL}
+      - MOODLE_USERNAME=${MOODLE_USERNAME}
+      - MOODLE_PASSWORD=${MOODLE_PASSWORD}
     volumes:
       - ./moodle_data:/bitnami/moodle
       - ./moodledata_data:/bitnami/moodledata
@@ -49,9 +51,13 @@ services:
       - "8080"
     labels:
       # Включаем Traefik для этого контейнера
-      - "traefik.enable=true"
+      - traefik.enable=true
+      - traefik.http.routers.moodle-router.rule=Host(`trainer.${DOMAIN}`)
+      - traefik.http.routers.moodle-router.entrypoints=websecure
+      - traefik.http.routers.moodle-router.tls=true
+      - traefik.http.routers.moodle-router.tls.certresolver=cert-resolver
       # Указываем, на какой порт внутри контейнера направлять трафик
-      - "traefik.http.services.moodle-service.loadbalancer.server.port=8080"
+      - traefik.http.services.moodle-service.loadbalancer.server.port=8080
 
   traefik:
     image: traefik:v3.5.2
@@ -60,19 +66,29 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
-    volumes: # (ro - read-only)
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro # Подключаем файл со статической конфигурацией
-      - ./traefik/dynamic_conf:/etc/traefik/dynamic_conf:ro # Подключаем папку с динамической конфигурацией
-      - ./traefik/acme.json:/acme.json # Файл для хранения сертификатов (важно: файл должен существовать и быть пустым при первом запуске)
+    expose:
+      - "8080" # Порт для доступа к дашборду Traefik (если нужно)
+    volumes: # (ro - read-only) не позволяет Traefik изменять файлы конфигурации
       - /var/run/docker.sock:/var/run/docker.sock:ro # Позволяет Traefik "слушать" события Docker
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro # Статическая конфигурация Traefik
+      - ./acme.json:/acme.json # Файл для хранения сертификатов
     networks:
       - frontend
     labels:
-      # Включаем Traefik для этого контейнера
-      - "traefik.enable=true"
-      # Указываем, на какой порт внутри контейнера направлять трафик
-      - "traefik.http.services.traefik-dashboard-service.loadbalancer.server.port=8080"
+      # Включаем Traefik для этого контейнера (если нужно)
+      - traefik.enable=true
+      - traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard.entrypoints=websecure
+      - traefik.http.routers.traefik-dashboard.tls=true
+      - traefik.http.routers.traefik-dashboard.tls.certresolver=cert-resolver
+
+      ### ИСПРАВЛЕНО: Указываем специальный сервис api@internal для роутера с правильным именем
+      - traefik.http.routers.traefik-dashboard.service=api@internal
+
+      ### ИСПРАВЛЕНО: Привязываем middleware к роутеру с правильным именем
+      - traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth
+      # пределяем middleware для аутентификации
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}
 
 # Определяем сети для изоляции сервисов
 networks:
