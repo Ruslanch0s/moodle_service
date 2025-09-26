@@ -1,4 +1,4 @@
-gloval:
+global:
   checkNewVersion: false
   sendAnonymousUsage: false
   
