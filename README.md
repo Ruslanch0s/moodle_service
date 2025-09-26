@@ -1,4 +1,4 @@
-1) copy acme.json.example as acme.json
-2) chmod 600 acme.json
-3) copy traefik.yml.example as traefik.yml
-4) set email in traefik.yml
+1) create .env
+2) config .env
+3) docker compose up --build -d
+
