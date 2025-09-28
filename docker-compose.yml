@@ -36,7 +36,7 @@ services:
       - MOODLE_DATABASE_PASSWORD=${MARIADB_PASSWORD}
       - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
       - MOODLE_REVERSE_PROXY=yes
-      - MOODLE_SITE_URL=https://${MOOODLE_SITE_DOMAIN}
+      - MOODLE_SITE_URL=https://${MOODLE_SITE_DOMAIN}
       - MOODLE_USERNAME=${MOODLE_USERNAME}
       - MOODLE_PASSWORD=${MOODLE_PASSWORD}
     volumes:
@@ -47,7 +47,7 @@ services:
     labels:
       # Включаем Traefik для этого контейнера
       - traefik.enable=true
-      - traefik.http.routers.moodle-router.rule=Host(`${MOOODLE_SITE_DOMAIN}`)
+      - traefik.http.routers.moodle-router.rule=Host(`${MOODLE_SITE_DOMAIN}`)
       - traefik.http.routers.moodle-router.entrypoints=websecure
       - traefik.http.routers.moodle-router.tls=true
       - traefik.http.routers.moodle-router.tls.certresolver=cert-resolver
