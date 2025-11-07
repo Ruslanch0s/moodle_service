@@ -51,8 +51,11 @@ services:
       - traefik.http.routers.moodle-router.entrypoints=websecure
       - traefik.http.routers.moodle-router.tls=true
       - traefik.http.routers.moodle-router.tls.certresolver=cert-resolver
+      # --- ЯВНО ПРИВЯЗЫВАЕМ РОУТЕР К СЕРВИСУ ---
+      - "traefik.http.routers.moodle-router.service=moodle-service"
       # Указываем, на какой порт внутри контейнера направлять трафик
       - traefik.http.services.moodle-service.loadbalancer.server.port=8080
+      - traefik.http.services.moodle-service.loadbalancer.server.scheme=http
     networks:
       - backend
       - frontend
