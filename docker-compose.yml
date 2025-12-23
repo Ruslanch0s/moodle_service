@@ -47,6 +47,7 @@ services:
     labels:
       # Включаем Traefik для этого контейнера
       - traefik.enable=true
+      - traefik.docker.network=traefik-proxy-network          # ← явная сеть для Traefik
       - traefik.http.routers.moodle-router.rule=Host(`${MOODLE_SITE_DOMAIN}`)
       - traefik.http.routers.moodle-router.entrypoints=websecure
       - traefik.http.routers.moodle-router.tls=true
